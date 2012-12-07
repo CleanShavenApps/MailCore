@@ -32,6 +32,12 @@
 #import <Foundation/Foundation.h>
 #import "CTMIME.h"
 
+typedef enum : NSInteger {
+	CTAttachmentTypeNone = 0,
+	CTAttachmentTypeInline = 1,
+	CTAttachmentTypeAttachment = 2,
+} CTAttachmentType;
+
 typedef void (^CTProgressBlock)(size_t curr, size_t max);
 
 @interface CTMIME_SinglePart : CTMIME {
@@ -46,6 +52,8 @@ typedef void (^CTProgressBlock)(size_t curr, size_t max);
     NSString *mContentId;
     NSError *lastError;
 }
+
+@property(nonatomic) CTAttachmentType attachmentType;
 @property(nonatomic) BOOL attached;
 @property(nonatomic) BOOL fetched;
 @property(nonatomic, retain) NSString *filename;

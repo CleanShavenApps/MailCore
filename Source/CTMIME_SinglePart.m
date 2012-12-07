@@ -61,10 +61,33 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 @synthesize contentId=mContentId;
 @synthesize data=mData;
 @synthesize fetched=mFetched;
+@synthesize attachmentType=_attachmentType;
 @synthesize lastError;
 
 + (id)mimeSinglePartWithData:(NSData *)data {
     return [[[CTMIME_SinglePart alloc] initWithData:data] autorelease];
+}
+
+- (CTAttachmentType)_attachmentType
+{
+	CTAttachmentType dispositionType = CTAttachmentTypeNone;
+	
+	if (mMimeFields != NULL) {
+		struct mailmime_disposition *disp = mMimeFields->fld_disposition;
+		
+		if (disp != NULL) {
+			if (disp->dsp_type != NULL) {
+				dispositionType = disp->dsp_type->dsp_type;
+				
+//				NSLog(@"\n\n*** Disposition type for %@ (%@) (attached %d): %d / MAILMIME_DISPOSITION_TYPE_ATTACHMENT (%d) MAILMIME_DISPOSITION_TYPE_INLINE (%d)\n\n",
+//					  self.filename, self.contentType, self.attached, dispositionType, MAILMIME_DISPOSITION_TYPE_ATTACHMENT, MAILMIME_DISPOSITION_TYPE_INLINE);
+			}
+			
+		}
+		
+	}
+		
+	return dispositionType;
 }
 
 - (id)initWithData:(NSData *)data {
@@ -140,6 +163,14 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 
         }
     }
+	
+	// Setup the attachment type
+	if (self.filename.length)
+	{
+		_attachmentType = [self _attachmentType];
+//		NSLog(@"*** [initWithMIMEStruct:] Got disposition type (%d)", _attachmentType);
+	}
+	
     return self;
 }
 
