@@ -586,7 +586,8 @@
         myFields->fld_reply_to = mailimf_reply_to_new(imf);
 }
 
-
+// Fix bcc recipients showing up in the recipient list of all recipients
+// http://stackoverflow.com/a/12169781/401329
 - (NSString *)render {
     CTMIME *msgPart = myParsedMIME;
 
@@ -598,14 +599,16 @@
         struct mailimf_address_list *replyTo = (myFields->fld_reply_to != NULL) ? (myFields->fld_reply_to->rt_addr_list) : NULL;
         struct mailimf_address_list *to = (myFields->fld_to != NULL) ? (myFields->fld_to->to_addr_list) : NULL;
         struct mailimf_address_list *cc = (myFields->fld_cc != NULL) ? (myFields->fld_cc->cc_addr_list) : NULL;
-        struct mailimf_address_list *bcc = (myFields->fld_bcc != NULL) ? (myFields->fld_bcc->bcc_addr_list) : NULL;
+//        struct mailimf_address_list *bcc = (myFields->fld_bcc != NULL) ? (myFields->fld_bcc->bcc_addr_list) : NULL;
         clist *inReplyTo = (myFields->fld_in_reply_to != NULL) ? (myFields->fld_in_reply_to->mid_list) : NULL;
         clist *references = (myFields->fld_references != NULL) ? (myFields->fld_references->mid_list) : NULL;
         char *subject = (myFields->fld_subject != NULL) ? (myFields->fld_subject->sbj_value) : NULL;
 
         //TODO uh oh, when this get freed it frees stuff in the CTCoreMessage
         //TODO Need to make sure that fields gets freed somewhere
-        fields = mailimf_fields_new_with_data(from, sender, replyTo, to, cc, bcc, inReplyTo, references, subject);
+//        fields = mailimf_fields_new_with_data(from, sender, replyTo, to, cc, bcc, inReplyTo, references, subject);
+		fields = mailimf_fields_new_with_data(from, sender, replyTo, to, cc, NULL, inReplyTo, references, subject);
+		
         [(CTMIME_MessagePart *)msgPart setIMFFields:fields];
     }
     return [myParsedMIME render];
