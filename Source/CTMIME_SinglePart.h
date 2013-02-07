@@ -32,6 +32,12 @@
 #import <Foundation/Foundation.h>
 #import "CTMIME.h"
 
+typedef enum : NSInteger {
+	CTAttachmentTypeNone = 0,
+	CTAttachmentTypeInline = 1,
+	CTAttachmentTypeAttachment = 2,
+} CTAttachmentType;
+
 typedef void (^CTProgressBlock)(size_t curr, size_t max);
 
 @interface CTMIME_SinglePart : CTMIME {
@@ -46,12 +52,14 @@ typedef void (^CTProgressBlock)(size_t curr, size_t max);
     NSString *mContentId;
     NSError *lastError;
 }
+
 @property(nonatomic) BOOL attached;
 @property(nonatomic) BOOL fetched;
 @property(nonatomic, retain) NSString *filename;
 @property(nonatomic, retain) NSString *contentId;
 @property(nonatomic, retain) NSData *data;
 @property(nonatomic, readonly) size_t size;
+@property(nonatomic, readonly) CTAttachmentType attachmentType;
 
 /*
  If an error occurred (nil or return of NO) call this method to get the error

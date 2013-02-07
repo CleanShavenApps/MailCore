@@ -140,6 +140,7 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 
         }
     }
+	
     return self;
 }
 
@@ -227,6 +228,21 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
     return 0;
 }
 
+// Returns the disposition type of an attachment
+- (CTAttachmentType)attachmentType
+{
+	if (mMimeFields != NULL) {
+		struct mailmime_disposition *disp = mMimeFields->fld_disposition;
+		
+		if (disp != NULL) {
+			if (disp->dsp_type != NULL) {
+				return disp->dsp_type->dsp_type;
+			}
+		}
+	}
+	
+	return CTAttachmentTypeNone;
+}
 
 - (void)dealloc {
     mailmime_single_fields_free(mMimeFields);

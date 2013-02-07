@@ -38,7 +38,10 @@
 
 @implementation CTBareAttachment
 @synthesize contentType=mContentType;
+@synthesize contentId=mContentId;
 @synthesize filename=mFilename;
+@synthesize attachmentType = _attachmentType;
+@synthesize size = _size;
 
 - (id)initWithMIMESinglePart:(CTMIME_SinglePart *)part {
     self = [super init];
@@ -46,6 +49,9 @@
         mMIMEPart = [part retain];
         self.filename = mMIMEPart.filename;
         self.contentType = mMIMEPart.contentType;
+		self.contentId = mMIMEPart.contentId;
+		_attachmentType = mMIMEPart.attachmentType;
+		_size = mMIMEPart.size;
     }
     return self;
 }
@@ -55,8 +61,8 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"ContentType: %@\tFilename: %@",
-                self.contentType, self.filename];
+    return [NSString stringWithFormat:@"Attachment: %@ (Content Type: %@, ID: %@, Disposition: %d, Size: %zd)",
+                self.filename, self.contentType, self.contentId, self.attachmentType, self.size];
 }
 
 - (CTCoreAttachment *)fetchFullAttachment {
@@ -78,6 +84,8 @@
     [mMIMEPart release];
     [mFilename release];
     [mContentType release];
+	[mContentId release];
     [super dealloc];
 }
+
 @end
