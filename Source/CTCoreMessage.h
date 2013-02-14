@@ -137,6 +137,12 @@
 - (void)setHTMLBody:(NSString *)body;
 
 /**
+ Use this method to set both plain text and HTML content as alternative versions
+ of the same message
+ */
+- (void)setBody:(NSString *)body HTMLBody:(NSString *)HTMLBody;
+
+/**
  A list of attachments this message has
 */
 - (NSArray *)attachments;

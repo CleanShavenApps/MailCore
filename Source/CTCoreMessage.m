@@ -243,7 +243,6 @@
     }
 }
 
-
 - (void)setBody:(NSString *)body {
     CTMIME *oldMIME = myParsedMIME;
     CTMIME_TextPart *text = [CTMIME_TextPart mimeTextPartWithString:body];
@@ -254,6 +253,12 @@
     if ([myParsedMIME isKindOfClass:[CTMIME_MultiPart class]]) {
         [(CTMIME_MultiPart *)myParsedMIME addMIMEPart:text];
     } else {
+		if (oldMIME)
+		{
+			NSLog(@"- setBody: replaces existing MIME (type: %@ / content: %@)",
+				  oldMIME.contentType, oldMIME.content);
+		}
+		
         CTMIME_MessagePart *messagePart = [CTMIME_MessagePart mimeMessagePartWithContent:text];
         myParsedMIME = [messagePart retain];
         [oldMIME release];
@@ -263,9 +268,48 @@
 - (void)setHTMLBody:(NSString *)body{
     CTMIME *oldMIME = myParsedMIME;
     CTMIME_HtmlPart *text = [CTMIME_HtmlPart mimeTextPartWithString:body];
+	
+	if (oldMIME)
+	{
+		NSLog(@"- setHTMLBody: replaces existing MIME (type: %@ / content: %@)",
+			  oldMIME.contentType, oldMIME.content);
+	}
+	
     CTMIME_MessagePart *messagePart = [CTMIME_MessagePart mimeMessagePartWithContent:text];
     myParsedMIME = [messagePart retain];
     [oldMIME release];	
+}
+
+- (void)setBody:(NSString *)body HTMLBody:(NSString *)HTMLBody
+{
+    CTMIME *oldMIME = myParsedMIME;
+	if (oldMIME)
+	{
+		NSLog(@"- setBody:HTMLBody: replaces existing MIME (type: %@ / content: %@)",
+			  oldMIME.contentType, oldMIME.content);
+	}
+
+	if (!body || !HTMLBody)
+	{
+		NSAssert(0, @"Can't setBody:HTMLBody: with body (%@) or HTMLBody (%@)", body, HTMLBody);
+		return;
+	}
+		
+	// Generate plain text and HTML parts
+	CTMIME_TextPart *plainTextPart = [CTMIME_TextPart mimeTextPartWithString:body];
+    CTMIME_HtmlPart *HTMLPart = [CTMIME_HtmlPart mimeTextPartWithString:HTMLBody];
+	
+	// Set them as parts of a multipart/alternative
+	CTMIME_MultiPart *multi = [CTMIME_MultiPart mimeMultiPart];
+	[multi setContentType:@"multipart/alternative"];
+	[multi addMIMEPart:plainTextPart];
+	[multi addMIMEPart:HTMLPart];
+	
+	// Replace the MIME structure with the new message part set to the the
+	// multipart we made earlier
+    CTMIME_MessagePart *messagePart = [CTMIME_MessagePart mimeMessagePartWithContent:multi];
+    myParsedMIME = [messagePart retain];
+    [oldMIME release];
 }
 
 - (NSArray *)attachments {
@@ -291,27 +335,30 @@
     CTMIME_MultiPart *multi;
     CTMIME_MessagePart *msg;
 
-    if ([myParsedMIME isKindOfClass:[CTMIME_MessagePart class]]) {
-        msg = (CTMIME_MessagePart *)myParsedMIME;
-        CTMIME *sub = [msg content];
-
-
-        // Creat new multimime part if needed
-        if ([sub isKindOfClass:[CTMIME_MultiPart class]]) {
-            multi = (CTMIME_MultiPart *)sub;
-        } else {
-            multi = [CTMIME_MultiPart mimeMultiPart];
-            [multi addMIMEPart:sub];
-            [msg setContent:multi];
-        }
-
-        // add new SinglePart which encodes the attachment in base64
-        CTMIME_SinglePart *attpart = [CTMIME_SinglePart mimeSinglePartWithData:[attachment data]];
-        attpart.contentType = [attachment contentType];
-        attpart.filename = [attachment filename];
-
-        [multi addMIMEPart:attpart];
-    }
+    if (![myParsedMIME isKindOfClass:[CTMIME_MessagePart class]]) {
+		NSAssert(0, @"Adding attachment without setting body or htmlBody not supported yet");
+		return;
+	}
+	
+	msg = (CTMIME_MessagePart *)myParsedMIME;
+	CTMIME *sub = [msg content];
+	
+	
+	// Creat new multimime part if needed
+	if ([sub isKindOfClass:[CTMIME_MultiPart class]]) {
+		multi = (CTMIME_MultiPart *)sub;
+	} else {
+		multi = [CTMIME_MultiPart mimeMultiPart];
+		[multi addMIMEPart:sub];
+		[msg setContent:multi];
+	}
+	
+	// add new SinglePart which encodes the attachment in base64
+	CTMIME_SinglePart *attpart = [CTMIME_SinglePart mimeSinglePartWithData:[attachment data]];
+	attpart.contentType = [attachment contentType];
+	attpart.filename = [attachment filename];
+	
+	[multi addMIMEPart:attpart];
 }
 
 - (NSString *)subject {
