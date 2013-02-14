@@ -123,6 +123,16 @@
     return [enumerator autorelease];
 }
 
+- (BOOL)isTypeOfContent:(NSString *)type
+{
+	// Make sure there's contentType at all before checking for text/plain,
+	// else condition is going to return YES without text/plain present
+	if (!self.contentType)
+		return NO;
+	
+	return ([[self.contentType lowercaseString] rangeOfString:type].location != NSNotFound);
+}
+
 - (void)dealloc {
     [mContentType release];
     [super dealloc];

@@ -160,10 +160,9 @@
         return [self hasHtmlBody:[mime content]];
     }
     else if ([mime isKindOfClass:[CTMIME_TextPart class]]) {
-        if ([[mime.contentType lowercaseString] rangeOfString:@"text/html"].location != NSNotFound) {
-            return YES;
-        }
+		return [mime isTypeOfContent:@"text/html"];
     }
+	// Why are we assuming that MIME has HTML Body when dealing with CTMIME_MultiPart?
     else if ([mime isKindOfClass:[CTMIME_MultiPart class]]) {
         return YES;
     }
@@ -192,6 +191,14 @@
     return body;
 }
 
+- (void)_appendContentsOfMIME:(CTMIME_SinglePart *)mime toString:(NSMutableString *)string
+{
+	[mime fetchPart];
+	NSString* content = [mime content];
+	if (content != nil) {
+		[string appendString:content];
+	}
+}
 
 - (void)_buildUpBodyText:(CTMIME *)mime result:(NSMutableString *)result {
     if (mime == nil)
@@ -201,13 +208,8 @@
         [self _buildUpBodyText:[mime content] result:result];
     }
     else if ([mime isKindOfClass:[CTMIME_TextPart class]]) {
-        if ([[mime.contentType lowercaseString] rangeOfString:@"text/plain"].location != NSNotFound) {
-            [(CTMIME_TextPart *)mime fetchPart];
-            NSString* y = [mime content];
-            if(y != nil) {
-                [result appendString:y];
-            }
-        }
+		if ([mime isTypeOfContent:@"text/plain"])
+			[self _appendContentsOfMIME:(CTMIME_TextPart *)mime toString:result];
     }
     else if ([mime isKindOfClass:[CTMIME_MultiPart class]]) {
         //TODO need to take into account the different kinds of multipart
@@ -226,14 +228,10 @@
     if ([mime isKindOfClass:[CTMIME_MessagePart class]]) {
         [self _buildUpHtmlBodyText:[mime content] result:result];
     }
-    else if ([mime isKindOfClass:[CTMIME_TextPart class]] || [mime isKindOfClass:[CTMIME_HtmlPart class]]) {
-        if ([[mime.contentType lowercaseString] rangeOfString:@"text/html"].location != NSNotFound) {
-            [(CTMIME_TextPart *)mime fetchPart];
-            NSString* y = [mime content];
-            if(y != nil) {
-                [result appendString:y];
-            }
-        }
+    else if ([mime isKindOfClass:[CTMIME_TextPart class]] ||
+			 [mime isKindOfClass:[CTMIME_HtmlPart class]]) {
+		if ([mime isTypeOfContent:@"text/html"])
+			[self _appendContentsOfMIME:(CTMIME_TextPart *)mime toString:result];
     }
     else if ([mime isKindOfClass:[CTMIME_MultiPart class]]) {
         //TODO need to take into account the different kinds of multipart

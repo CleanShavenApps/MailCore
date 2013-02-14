@@ -44,6 +44,7 @@
     self = [super init];
     if (self) {
         [self setString:string];
+		[self setContentType:@"text/html"];
     }
     return self;
 }

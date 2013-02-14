@@ -35,6 +35,7 @@
 #import "MailCoreTypes.h"
 
 @implementation CTMIME_TextPart
+
 + (id)mimeTextPartWithString:(NSString *)str {
     return [[[CTMIME_TextPart alloc] initWithString:str] autorelease];
 }
@@ -43,6 +44,7 @@
     self = [super init];
     if (self) {
         [self setString:string];
+		[self setContentType:@"text/plain"];
     }
     return self;
 }

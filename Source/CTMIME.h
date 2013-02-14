@@ -45,4 +45,7 @@
 - (struct mailmime *)buildMIMEStruct;
 - (NSString *)render;
 - (CTMIME_Enumerator *)mimeEnumerator;
+
+// Checks with rangeOfString, making sure contentType is not nil
+- (BOOL)isTypeOfContent:(NSString *)type;
 @end
