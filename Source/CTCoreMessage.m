@@ -226,7 +226,7 @@
     if ([mime isKindOfClass:[CTMIME_MessagePart class]]) {
         [self _buildUpHtmlBodyText:[mime content] result:result];
     }
-    else if ([mime isKindOfClass:[CTMIME_TextPart class]]) {
+    else if ([mime isKindOfClass:[CTMIME_TextPart class]] || [mime isKindOfClass:[CTMIME_HtmlPart class]]) {
         if ([[mime.contentType lowercaseString] rangeOfString:@"text/html"].location != NSNotFound) {
             [(CTMIME_TextPart *)mime fetchPart];
             NSString* y = [mime content];
