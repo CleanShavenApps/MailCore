@@ -154,12 +154,14 @@ static const int MAX_PATH_SIZE = 1024;
     return success;
 }
 
+
 - (CTIdleResult)idleWithTimeout:(NSUInteger)timeout {
     NSAssert(!self.idling, @"Can't call idle when we are already idling!");
     self.lastError = nil;
     
     BOOL success = [self connect];
     if (!success) {
+		self.lastError = MailCoreCreateError(10000, @"CTIdleError because ![self connect]");
         return CTIdleError;
     }
     
@@ -169,6 +171,7 @@ static const int MAX_PATH_SIZE = 1024;
     self.idling = YES;
     r = pipe(idlePipe);
     if (r == -1) {
+		self.lastError = MailCoreCreateError(10000, @"CTIdleError because pipe(idlePipe) == -1");
         return CTIdleError;
     }
     
@@ -176,6 +179,14 @@ static const int MAX_PATH_SIZE = 1024;
     r = mailimap_idle(self.imapSession);
     if (r != MAILIMAP_NO_ERROR) {
         self.lastError = MailCoreCreateErrorFromIMAPCode(r);
+		
+		NSString *detailedDescription =
+		[NSString stringWithFormat:@"CTIdleError because mailimap_idle != MAILIMAP_NO_ERROR: %@", self.lastError.localizedDescription];
+		NSDictionary *detailedUserInfo = @{NSLocalizedDescriptionKey : detailedDescription};
+		
+		self.lastError =
+		[NSError errorWithDomain:self.lastError.domain code:self.lastError.code userInfo:detailedUserInfo];
+
         result = CTIdleError;
     }
     
@@ -220,6 +231,14 @@ static const int MAX_PATH_SIZE = 1024;
     r = mailimap_idle_done(self.imapSession);
     if (r != MAILIMAP_NO_ERROR) {
         self.lastError = MailCoreCreateErrorFromIMAPCode(r);
+
+		NSString *detailedDescription =
+		[NSString stringWithFormat:@"CTIdleError because mailimap_idle_done != MAILIMAP_NO_ERROR: %@", self.lastError.localizedDescription];
+		NSDictionary *detailedUserInfo = @{NSLocalizedDescriptionKey : detailedDescription};
+		
+		self.lastError =
+		[NSError errorWithDomain:self.lastError.domain code:self.lastError.code userInfo:detailedUserInfo];
+		
         result = CTIdleError;
     }
 
