@@ -492,7 +492,7 @@
 		_internalDate = [date retain];
 	}
 	
-	NSLog(@"Set date of message (%@) to: %@", self.subject, [NSDateFormatter localizedStringFromDate:self.internalDate dateStyle:NSDateFormatterMediumStyle timeStyle:NSDateFormatterMediumStyle]);
+//	NSLog(@"Set date of message (%@) to: %@", self.subject, [NSDateFormatter localizedStringFromDate:self.internalDate dateStyle:NSDateFormatterMediumStyle timeStyle:NSDateFormatterMediumStyle]);
 }
 
 - (BOOL)isUnread {
