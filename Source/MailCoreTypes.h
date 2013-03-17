@@ -40,6 +40,7 @@ typedef enum {
     CTFetchAttrDefaultsOnly     = 0,
     CTFetchAttrBodyStructure    = 1 << 0,
     CTFetchAttrEnvelope         = 1 << 1,
+    CTFetchAttrInternalDate     = 1 << 2,
 } CTFetchAttributes;
 
 /** Constants for IDLE **/

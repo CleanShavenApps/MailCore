@@ -502,7 +502,9 @@ static const int MAX_PATH_SIZE = 1024;
             self.lastError = MailCoreCreateErrorFromIMAPCode(r);
             return nil;
         }
-		
+	}
+	
+	if (attrs & CTFetchAttrInternalDate) {
 		// Fetch Internal Date
 		fetch_att = mailimap_fetch_att_new_internaldate();
 		r = mailimap_fetch_type_new_fetch_att_list_add(fetch_type, fetch_att);
@@ -577,18 +579,13 @@ static const int MAX_PATH_SIZE = 1024;
             self.lastError = MailCoreCreateErrorFromIMAPCode(MAIL_ERROR_MEMORY);
             return nil;
         }
-		
-		struct mailimap_msg_att_static *msg_att_static = (struct mailimap_msg_att_static *)clist_content(fetchResultIter);
-		if (msg_att_static == nil) {
-			self.lastError = MailCoreCreateErrorFromIMAPCode(MAIL_ERROR_MEMORY);
-			return nil;
-		}
 
         uint32_t uid = 0;
         char * references = NULL;
         size_t ref_size = 0;
         struct mailimap_body * imap_body = NULL;
         struct mailimap_envelope * envelope = NULL;
+		struct mailimap_date_time * internalDate = NULL;
 
         if (attrs & CTFetchAttrBodyStructure) {
             r = imap_get_msg_att_info(msg_att, &uid, &envelope, &references, &ref_size, NULL, &imap_body);
@@ -641,6 +638,33 @@ static const int MAX_PATH_SIZE = 1024;
                 return nil;
             }
         }
+		
+		// If suppose to fetch internal date, and internal date still NULL
+		if (attrs & CTFetchAttrInternalDate && internalDate == NULL)
+		{
+			BOOL foundInternalDate = NO;
+			clistiter * item_cur;
+			for (item_cur = clist_begin(msg_att->att_list);
+				 item_cur != NULL && !foundInternalDate;
+				 item_cur = clist_next(item_cur))
+			{
+				struct mailimap_msg_att_item * item;
+				item = clist_content(item_cur);
+				
+				switch (item->att_type) {
+					case MAILIMAP_MSG_ATT_ITEM_STATIC:
+						switch (item->att_data.att_static->att_type) {
+							case MAILIMAP_MSG_ATT_INTERNALDATE:
+							{
+								internalDate = item->att_data.att_static->att_data.att_internal_date;
+								foundInternalDate = YES;
+								break;
+							}
+						}
+						break;
+				}
+			}
+		}
 
         CTCoreMessage* msgObject = [[CTCoreMessage alloc] initWithMessageStruct:msg];
         msgObject.parentFolder = self;
@@ -648,9 +672,17 @@ static const int MAX_PATH_SIZE = 1024;
         if (fields != NULL) {
             [msgObject setFields:fields];
         }
+		
         if (attrs & CTFetchAttrBodyStructure) {
             [msgObject setBodyStructure:new_body];
         }
+		
+		if (internalDate != NULL)
+		{
+			[msgObject setInternalDateWithLibetpanDateTime:
+			 (struct mailimf_date_time *)internalDate];
+		}
+		
         [messages addObject:msgObject];
         [msgObject release];
 
@@ -875,7 +907,7 @@ int uid_list_to_env_list(clist * fetch_result, struct mailmessage_list ** result
     for(cur = clist_begin(fetch_result); cur != NULL; cur = clist_next(cur)) {
         struct mailimap_msg_att * msg_att;
         clistiter * item_cur;
-		struct mailimap_date_time * internaldate;
+//		struct mailimap_date_time * internaldate;
         uint32_t uid;
         size_t size;
 
@@ -893,13 +925,13 @@ int uid_list_to_env_list(clist * fetch_result, struct mailmessage_list ** result
                         uid = item->att_data.att_static->att_data.att_uid;
                     break;
 						
-					case MAILIMAP_MSG_ATT_INTERNALDATE:
-						internaldate = item->att_data.att_static->att_data.att_internal_date;
-						NSLog(@"Date-time { %i/%i/%i - %i:%i:%i %i }\n",
-						internaldate->dt_day, internaldate->dt_month, internaldate->dt_year,
-						internaldate->dt_hour, internaldate->dt_min, internaldate->dt_month,
-						internaldate->dt_zone);
-						break;
+//					case MAILIMAP_MSG_ATT_INTERNALDATE:
+//						internaldate = item->att_data.att_static->att_data.att_internal_date;
+//						NSLog(@"Date-time { %i/%i/%i - %i:%i:%i %i }\n",
+//						internaldate->dt_day, internaldate->dt_month, internaldate->dt_year,
+//						internaldate->dt_hour, internaldate->dt_min, internaldate->dt_month,
+//						internaldate->dt_zone);
+//						break;
 
                     case MAILIMAP_MSG_ATT_RFC822_SIZE:
                         size = item->att_data.att_static->att_data.att_rfc822_size;

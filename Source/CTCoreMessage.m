@@ -44,7 +44,7 @@
 #import "MailCoreUtilities.h"
 
 @implementation CTCoreMessage
-@synthesize mime=myParsedMIME, lastError, parentFolder;
+@synthesize mime=myParsedMIME, lastError, parentFolder, internalDate = _internalDate;
 
 - (id)init {
     self = [super init];
@@ -95,6 +95,7 @@
     }
     self.lastError = nil;
     self.parentFolder = nil;
+	self.internalDate = nil;
     [myParsedMIME release];
     [super dealloc];
 }
@@ -416,8 +417,15 @@
     if((d = [self libetpanDateTime]) == NULL)
         return nil;
 
-    NSInteger timezoneOffsetInSeconds = 3600*d->dt_zone/100;
+	return [self timeZoneFromLibetpanDateTime:d];
+}
 
+- (NSTimeZone*)timeZoneFromLibetpanDateTime:(struct mailimf_date_time*)libetpanDateTime
+{
+    if (!libetpanDateTime || libetpanDateTime == NULL)
+        return nil;
+	
+    NSInteger timezoneOffsetInSeconds = 3600*libetpanDateTime->dt_zone/100;
     return [NSTimeZone timeZoneForSecondsFromGMT:timezoneOffsetInSeconds];
 }
 
@@ -448,6 +456,43 @@
 
         return messageDate;
     }
+}
+
+- (void)setInternalDateWithLibetpanDateTime:(struct mailimf_date_time*)d
+{
+	NSDate *date = nil;
+	if (!d || d == NULL)
+	{
+		date = nil;
+	}
+	
+	else
+	{
+        NSCalendar *calendar = [[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar];
+        calendar.timeZone = [self timeZoneFromLibetpanDateTime:d];
+
+		NSDateComponents *comps = [[NSDateComponents alloc] init];
+		
+        [comps setYear:d->dt_year];
+        [comps setMonth:d->dt_month];
+        [comps setDay:d->dt_day];
+        [comps setHour:d->dt_hour];
+        [comps setMinute:d->dt_min];
+        [comps setSecond:d->dt_sec];
+		
+        date = [calendar dateFromComponents:comps];
+		
+        [comps release];
+        [calendar release];
+	}
+	
+	if (_internalDate != date)
+	{
+		[_internalDate autorelease];
+		_internalDate = [date retain];
+	}
+	
+	NSLog(@"Set date of message (%@) to: %@", self.subject, [NSDateFormatter localizedStringFromDate:self.internalDate dateStyle:NSDateFormatterMediumStyle timeStyle:NSDateFormatterMediumStyle]);
 }
 
 - (BOOL)isUnread {

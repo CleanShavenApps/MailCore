@@ -57,6 +57,8 @@
 
 @property (nonatomic, retain) CTCoreFolder *parentFolder;
 
+@property (nonatomic, retain) NSDate *internalDate;
+
 /**
  If the body structure has been fetched, this will contain the MIME structure
 */
@@ -167,7 +169,17 @@
 /**
  Returns the date as given in the Date mail field
 */
-- (NSDate *)senderDate; 
+- (NSDate *)senderDate;
+
+/**
+ Returns the internal date of the mail
+ */
+//- (NSDate *)internalDate;
+
+/**
+ Set the internal date with
+ */
+- (void)setInternalDateWithLibetpanDateTime:(struct mailimf_date_time*)libetpanDateTime;
 
 /**
  Returns YES if the message is unread.
