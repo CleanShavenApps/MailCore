@@ -137,7 +137,7 @@ static const int MAX_PATH_SIZE = 1024;
     [self getUTF7String:newPath fromString:path];
     
     char oldPath[MAX_PATH_SIZE];
-    [self getUTF7String:newPath fromString:myPath];
+    [self getUTF7String:oldPath fromString:myPath];
     
     err =  mailimap_rename([myAccount session], oldPath, newPath);
     
@@ -349,9 +349,15 @@ static const int MAX_PATH_SIZE = 1024;
     NSString *msgStr = [msg render];
     if (![self connect])
         return NO;
-    err = mailsession_append_message ([self folderSession],
+    
+    struct mail_flags *flags = mail_flags_new(MAIL_FLAG_SEEN, clist_new());
+    
+    err = mailsession_append_message_flags([self folderSession],
                                       [msgStr cStringUsingEncoding: NSUTF8StringEncoding],
-                                      [msgStr lengthOfBytesUsingEncoding: NSUTF8StringEncoding]);
+                                      [msgStr lengthOfBytesUsingEncoding: NSUTF8StringEncoding],
+                                      flags);
+    
+    mail_flags_free(flags);
     if (MAILIMAP_NO_ERROR != err)
         self.lastError = MailCoreCreateErrorFromIMAPCode (err);
     return MAILIMAP_NO_ERROR == err;
@@ -446,7 +452,7 @@ static const int MAX_PATH_SIZE = 1024;
     return YES;
 }
 
-// We always fetch UID, RFC822.Size, and Flags
+// We always fetch UID and Flags
 - (NSArray *)messagesForSet:(struct mailimap_set *)set fetchAttributes:(CTFetchAttributes)attrs uidFetch:(BOOL)uidFetch {
     BOOL success = [self connect];
     if (!success) {
@@ -483,14 +489,16 @@ static const int MAX_PATH_SIZE = 1024;
         return nil;
     }
 
-    // Always fetch RFC822.Size
-    fetch_att = mailimap_fetch_att_new_rfc822_size();
-    r = mailimap_fetch_type_new_fetch_att_list_add(fetch_type, fetch_att);
-    if (r != MAILIMAP_NO_ERROR) {
-        mailimap_fetch_att_free(fetch_att);
-        mailimap_fetch_type_free(fetch_type);
-        self.lastError = MailCoreCreateErrorFromIMAPCode(r);
-        return nil;
+    // We only fetch RFC822.Size if the envelope is being fetched
+    if (attrs & CTFetchAttrEnvelope) {
+        fetch_att = mailimap_fetch_att_new_rfc822_size();
+        r = mailimap_fetch_type_new_fetch_att_list_add(fetch_type, fetch_att);
+        if (r != MAILIMAP_NO_ERROR) {
+            mailimap_fetch_att_free(fetch_att);
+            mailimap_fetch_type_free(fetch_type);
+            self.lastError = MailCoreCreateErrorFromIMAPCode(r);
+            return nil;
+        }
     }
 
     // We only fetch the body structure if requested
@@ -754,7 +762,8 @@ static const int MAX_PATH_SIZE = 1024;
         return NO;
     }
 
-    const char *mbPath = [path cStringUsingEncoding:NSUTF8StringEncoding];
+    char mbPath[MAX_PATH_SIZE];
+    [self getUTF7String:mbPath fromString:path];
     int err = mailsession_copy_message([self folderSession], uid, mbPath);
     if (err != MAIL_NO_ERROR) {
         self.lastError = MailCoreCreateErrorFromIMAPCode(err);
@@ -769,7 +778,8 @@ static const int MAX_PATH_SIZE = 1024;
         return NO;
     }
 
-    const char *mbPath = [path cStringUsingEncoding:NSUTF8StringEncoding];
+    char mbPath[MAX_PATH_SIZE];
+    [self getUTF7String:mbPath fromString:path];
     int err = mailsession_move_message([self folderSession], uid, mbPath);
     if (err != MAIL_NO_ERROR) {
         self.lastError = MailCoreCreateErrorFromIMAPCode(err);
