@@ -47,7 +47,7 @@
 @property(retain) NSString *filename;
 @property(retain) NSString *contentType;
 @property(retain) NSString *contentId;
-@property(readonly) CTAttachmentType attachmentType;
+@property(readwrite) CTAttachmentType attachmentType;
 @property(readonly) size_t size;
 @property(readonly) CTMIME_SinglePart *part;
 

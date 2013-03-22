@@ -342,15 +342,35 @@
 
     CTMIME_Enumerator *enumerator = [myParsedMIME mimeEnumerator];
     CTMIME *mime;
+	
     while ((mime = [enumerator nextObject])) {
-        if ([mime isKindOfClass:[CTMIME_SinglePart class]]) {
+		// Go for all single parts that are not text (text/plain or text/html)
+        if ([mime isKindOfClass:[CTMIME_SinglePart class]] &&
+			![mime isKindOfClass:[CTMIME_TextPart class]])
+		{
             CTMIME_SinglePart *singlePart = (CTMIME_SinglePart *)mime;
-            if (singlePart.attached) {
-                CTBareAttachment *attach = [[CTBareAttachment alloc]
-                                                initWithMIMESinglePart:singlePart];
-                [attachments addObject:attach];
-                [attach release];
-            }
+						
+			// Ignore the .attached property or the content disposition
+			// Mail sent from Sparrow have all text set to inline for content
+			// disposition. Attached property is NO for all images sent from
+			// Photos.app in Mail on iPhone
+			CTBareAttachment *attach =
+			[[CTBareAttachment alloc] initWithMIMESinglePart:singlePart];
+			
+			// Override the attachment type property with the actual type
+			// of the attachment based on whether attached is true
+			attach.attachmentType =
+			singlePart.attached ? CTAttachmentTypeAttachment : CTAttachmentTypeInline;
+			
+			// We'll probably have a shitty file name (or worse, no file name at
+			// all) if it's an inline attachment.
+			if (attach.attachmentType == CTAttachmentTypeInline)
+			{
+				// Do something if needed
+			}
+			
+			[attachments addObject:attach];
+			[attach release];
         }
     }
     return attachments;
