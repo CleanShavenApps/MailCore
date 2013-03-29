@@ -344,10 +344,11 @@
     CTMIME *mime;
 	
     while ((mime = [enumerator nextObject])) {
+		
 		// Go for all single parts that are not text (text/plain or text/html)
         if ([mime isKindOfClass:[CTMIME_SinglePart class]] &&
 			![mime isKindOfClass:[CTMIME_TextPart class]])
-		{
+		{			
             CTMIME_SinglePart *singlePart = (CTMIME_SinglePart *)mime;
 						
 			// Ignore the .attached property or the content disposition
@@ -358,15 +359,17 @@
 			[[CTBareAttachment alloc] initWithMIMESinglePart:singlePart];
 			
 			// Override the attachment type property with the actual type
-			// of the attachment based on whether attached is true
+			// of the attachment based on whether there is content ID. This
+			// seems like an even better check than .attached property
 			attach.attachmentType =
-			singlePart.attached ? CTAttachmentTypeAttachment : CTAttachmentTypeInline;
+			singlePart.contentId.length ? CTAttachmentTypeInline : CTAttachmentTypeAttachment;
 			
 			// We'll probably have a shitty file name (or worse, no file name at
 			// all) if it's an inline attachment.
 			if (attach.attachmentType == CTAttachmentTypeInline)
 			{
 				// Do something if needed
+				
 			}
 			
 			[attachments addObject:attach];
