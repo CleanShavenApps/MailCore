@@ -408,20 +408,38 @@
 	attpart.contentId = [attachment contentId];
 
 	CTContentDispositionType disposition = CTContentDispositionTypeUndefined;
-	switch ([attachment attachmentType]) {
-		case CTAttachmentTypeInline:
-			disposition = CTContentDispositionTypeInline;
-			break;
-			
-		case CTAttachmentTypeAttachment:
-			disposition = CTContentDispositionTypeAttachment;
-			break;
-		
-		case CTAttachmentTypeNone:
-		default:
-			break;
+	
+	// Always set disposition to inline if there's content ID
+	if (attpart.contentId.length)
+	{
+		disposition = CTContentDispositionTypeInline;
 	}
+	
+	// Else set disposition based on attachmentType
+	else
+	{
+		switch ([attachment attachmentType]) {
+			case CTAttachmentTypeInline:
+				disposition = CTContentDispositionTypeInline;
+				break;
+				
+			case CTAttachmentTypeAttachment:
+				disposition = CTContentDispositionTypeAttachment;
+				break;
+				
+			case CTAttachmentTypeNone:
+			default:
+				break;
+		}
+	}
+		
 	attpart.disposition = disposition;
+	
+	// If disposition is inline, ensure multipart content type is multipart/related
+	if (disposition == CTContentDispositionTypeInline)
+	{
+		[multi setContentType:@"multipart/related"];
+	}
 	
 	[multi addMIMEPart:attpart];
 }

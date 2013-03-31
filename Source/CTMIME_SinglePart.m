@@ -209,9 +209,12 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 		char *dupeData = malloc(strlen(charData));
 		strcpy(dupeData, charData);
 		
-		// By default, an attachment
+		BOOL hasContentID = self.contentId.length > 2;
+		
+		// By default, an attachment unless self.disposition is inline or
+		// we have content ID
 		int disposition =
-		self.disposition == CTContentDispositionTypeInline ?
+		(self.disposition == CTContentDispositionTypeInline || hasContentID) ?
 		MAILMIME_DISPOSITION_TYPE_INLINE : MAILMIME_DISPOSITION_TYPE_ATTACHMENT;
 		
 		mime_fields =
@@ -219,9 +222,9 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 									 dupeData,
 									 MAILMIME_MECHANISM_BASE64);
 
-		// Add Content ID, even for non inline disposition
-		// From https://github.com/omolowa/MailCore.git
-		if (self.contentId.length > 2)
+		// Add Content ID if present
+		// Partially adapted from https://github.com/omolowa/MailCore.git
+		if (hasContentID)
 		{
 			NSString *strippedContentID = [NSString stringWithString:self.contentId];
 			
@@ -245,9 +248,10 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 							   NULL,
 							   NULL,
 							   NULL);
-
+			
             clist_append(mime_fields->fld_list, mime_id);
 		}
+		
     }
 	
 	else {
