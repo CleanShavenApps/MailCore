@@ -32,6 +32,12 @@
 #import <Foundation/Foundation.h>
 #import "CTMIME_SinglePart.h"
 
+typedef enum : NSInteger {
+	CTAttachmentTypeNone = 0,
+	CTAttachmentTypeInline = 1,
+	CTAttachmentTypeAttachment = 2,
+} CTAttachmentType;
+
 @class CTCoreAttachment;
 
 /**

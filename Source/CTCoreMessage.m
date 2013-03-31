@@ -391,7 +391,7 @@
 	msg = (CTMIME_MessagePart *)myParsedMIME;
 	CTMIME *sub = [msg content];
 	
-	
+	// TODO: Change the contentType to multipart/related for inline attachments
 	// Creat new multimime part if needed
 	if ([sub isKindOfClass:[CTMIME_MultiPart class]]) {
 		multi = (CTMIME_MultiPart *)sub;
@@ -406,6 +406,22 @@
 	attpart.contentType = [attachment contentType];
 	attpart.filename = [attachment filename];
 	attpart.contentId = [attachment contentId];
+
+	CTContentDispositionType disposition = CTContentDispositionTypeUndefined;
+	switch ([attachment attachmentType]) {
+		case CTAttachmentTypeInline:
+			disposition = CTContentDispositionTypeInline;
+			break;
+			
+		case CTAttachmentTypeAttachment:
+			disposition = CTContentDispositionTypeAttachment;
+			break;
+		
+		case CTAttachmentTypeNone:
+		default:
+			break;
+	}
+	attpart.disposition = disposition;
 	
 	[multi addMIMEPart:attpart];
 }

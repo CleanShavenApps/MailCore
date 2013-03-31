@@ -205,15 +205,55 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
     int r;
 
     if (mFilename) {
-        char *charData = (char *)[mFilename cStringUsingEncoding:NSUTF8StringEncoding];
-        char *dupeData = malloc(strlen(charData));
-        strcpy(dupeData, charData);
-        mime_fields = mailmime_fields_new_filename( MAILMIME_DISPOSITION_TYPE_ATTACHMENT, 
-                                                    dupeData,
-                                                    MAILMIME_MECHANISM_BASE64 ); 
-    } else {
+		char *charData = (char *)[mFilename cStringUsingEncoding:NSUTF8StringEncoding];
+		char *dupeData = malloc(strlen(charData));
+		strcpy(dupeData, charData);
+		
+		// By default, an attachment
+		int disposition =
+		self.disposition == CTContentDispositionTypeInline ?
+		MAILMIME_DISPOSITION_TYPE_INLINE : MAILMIME_DISPOSITION_TYPE_ATTACHMENT;
+		
+		mime_fields =
+		mailmime_fields_new_filename(disposition,
+									 dupeData,
+									 MAILMIME_MECHANISM_BASE64);
+
+		// Add Content ID, even for non inline disposition
+		// From https://github.com/omolowa/MailCore.git
+		if (self.contentId.length > 2)
+		{
+			NSString *strippedContentID = [NSString stringWithString:self.contentId];
+			
+			// Strip the left < and right > if present
+			if ([[strippedContentID substringToIndex:1] isEqualToString:@"<"])
+				strippedContentID = [strippedContentID substringFromIndex:1];
+			
+			if ([[strippedContentID substringFromIndex:strippedContentID.length - 1] isEqualToString:@">"])
+				strippedContentID = [strippedContentID substringToIndex:strippedContentID.length - 1];
+			
+			struct mailmime_field *mime_id = NULL;
+			
+            // These must be malloc-ated
+            mime_id =
+			mailmime_field_new(MAILMIME_FIELD_ID,
+							   NULL,
+							   NULL,
+							   strdup((char *)[strippedContentID cStringUsingEncoding:NSUTF8StringEncoding]),
+							   NULL,
+							   1,
+							   NULL,
+							   NULL,
+							   NULL);
+
+            clist_append(mime_fields->fld_list, mime_id);
+		}
+    }
+	
+	else {
         mime_fields = mailmime_fields_new_encoding(MAILMIME_MECHANISM_BASE64);
     }
+	
     content = mailmime_content_new_with_str([self.contentType cStringUsingEncoding:NSUTF8StringEncoding]);
     mime_sub = mailmime_new_empty(content, mime_fields);
 
@@ -232,20 +272,38 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 - (struct mailmime_single_fields *)mimeFields {
     return mMimeFields;
 }
+
 // Returns the disposition type of an attachment
-- (CTAttachmentType)attachmentType
+- (CTContentDispositionType)disposition
 {
-	if (mMimeFields != NULL) {
+	// Grab the disposition from the mime fields if available (ie. this is init
+	// with initWithMIMEStruct:forMessage:)
+	if (_disposition == CTContentDispositionTypeUndefined && mMimeFields != NULL)
+	{
 		struct mailmime_disposition *disp = mMimeFields->fld_disposition;
 		
 		if (disp != NULL) {
 			if (disp->dsp_type != NULL) {
-				return disp->dsp_type->dsp_type;
+				switch (disp->dsp_type->dsp_type) {
+					case MAILMIME_DISPOSITION_TYPE_INLINE:
+						_disposition = CTContentDispositionTypeInline;
+						break;
+						
+					case MAILMIME_DISPOSITION_TYPE_ATTACHMENT:
+						_disposition = CTContentDispositionTypeAttachment;
+						break;
+						
+					case MAILMIME_DISPOSITION_TYPE_ERROR:
+					case MAILMIME_DISPOSITION_TYPE_EXTENSION:
+					default:
+						_disposition = CTContentDispositionTypeUndefined;
+						break;
+				}
 			}
 		}
 	}
 	
-	return CTAttachmentTypeNone;
+	return _disposition;
 }
 
 - (void)dealloc {

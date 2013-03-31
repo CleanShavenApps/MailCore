@@ -50,7 +50,20 @@
         self.filename = mMIMEPart.filename;
         self.contentType = mMIMEPart.contentType;
 		self.contentId = mMIMEPart.contentId;
-		_attachmentType = mMIMEPart.attachmentType;
+		
+		switch (mMIMEPart.disposition)
+		{
+			case CTContentDispositionTypeInline:
+				_attachmentType = CTAttachmentTypeInline;
+				break;
+				
+			case CTContentDispositionTypeAttachment:
+			case CTContentDispositionTypeUndefined:
+			default:
+				_attachmentType = CTAttachmentTypeAttachment;
+				break;
+		}
+		
 		_size = mMIMEPart.size;
     }
     return self;
@@ -62,7 +75,7 @@
 
 - (NSString *)description {
     return [NSString stringWithFormat:@"Attachment: %@ (Content Type: %@, ID: %@, Disposition: %d, Size: %zd)",
-                self.filename, self.contentType, self.contentId, self.attachmentType, self.size];
+                self.filename, self.contentType, self.contentId, (int) self.attachmentType, self.size];
 }
 
 - (CTCoreAttachment *)fetchFullAttachment {
