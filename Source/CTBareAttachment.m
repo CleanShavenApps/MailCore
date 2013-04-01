@@ -47,7 +47,7 @@
     self = [super init];
     if (self) {
         mMIMEPart = [part retain];
-        self.filename = mMIMEPart.filename;
+        self.filename = mMIMEPart.filename.length ? mMIMEPart.filename : mMIMEPart.name;		
         self.contentType = mMIMEPart.contentType;
 		self.contentId = mMIMEPart.contentId;
 		

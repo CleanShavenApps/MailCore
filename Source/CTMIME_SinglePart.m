@@ -61,7 +61,6 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 @synthesize contentId=mContentId;
 @synthesize data=mData;
 @synthesize fetched=mFetched;
-@synthesize lastError;
 
 + (id)mimeSinglePartWithData:(NSData *)data {
     return [[[CTMIME_SinglePart alloc] initWithData:data] autorelease];
@@ -69,9 +68,11 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 
 - (id)initWithData:(NSData *)data {
     self = [super init];
-    if (self) {
-        self.data = data;
-        self.fetched = YES;
+    if (self)
+	{
+        mData = [data retain];
+        mFetched = YES;
+		_disposition = CTContentDispositionTypeUndefined;
     }
     return self;
 }
@@ -79,66 +80,63 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 - (id)initWithMIMEStruct:(struct mailmime *)mime 
         forMessage:(struct mailmessage *)message {
     self = [super initWithMIMEStruct:mime forMessage:message];
-    if (self) {
-        self.data = nil;
+    if (self)
+	{
+        mData = nil;
         mMime = mime;
         mMessage = message;
-        self.fetched = NO;
+        mFetched = NO;
+		_disposition = CTContentDispositionTypeUndefined;
 
         mMimeFields = mailmime_single_fields_new(mMime->mm_mime_fields, mMime->mm_content_type);
-        if (mMimeFields != NULL) {
+        if (mMimeFields != NULL)
+		{	
+			// .contentId if content-id if present
             if (mMimeFields->fld_id != NULL) {
                 self.contentId = [NSString stringWithCString:mMimeFields->fld_id encoding:NSUTF8StringEncoding];
             }
             
+			// .disposition if content-disposition is present
+			// .attached if content-disposition is attachment
             struct mailmime_disposition *disp = mMimeFields->fld_disposition;
-            if (disp != NULL) {
-                if (disp->dsp_type != NULL) {
-                    self.attached = (disp->dsp_type->dsp_type ==
-                                        MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
-
-                    if (self.attached)
-                    {
-                        // MWA workaround for bug where specific emails look like this:
-                        // Content-Type: application/vnd.ms-excel; name="=?UTF-8?B?TVhBVC0zMTFfcGFja2xpc3QxMTA0MDAueGxz?="
-                        // Content-Disposition: attachment
-                        // - usually they look like -
-                        // Content-Type: image/jpeg; name="photo.JPG"
-                        // Content-Disposition: attachment; filename="photo.JPG"
-                        if (mMimeFields->fld_disposition_filename == NULL && mMimeFields->fld_content_name != NULL)
-                            mMimeFields->fld_disposition_filename = mMimeFields->fld_content_name;
-                    }
-                }
+            if (disp != NULL && disp->dsp_type != NULL)
+			{
+				self.attached =
+				(disp->dsp_type->dsp_type == MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
+				
+				switch (disp->dsp_type->dsp_type)
+				{
+					case MAILMIME_DISPOSITION_TYPE_INLINE:
+						_disposition = CTContentDispositionTypeInline;
+						break;
+						
+					case MAILMIME_DISPOSITION_TYPE_ATTACHMENT:
+						_disposition = CTContentDispositionTypeAttachment;
+						break;
+						
+					case MAILMIME_DISPOSITION_TYPE_ERROR:
+					case MAILMIME_DISPOSITION_TYPE_EXTENSION:
+					default:
+						_disposition = CTContentDispositionTypeUndefined;
+						break;
+				}
+			}
+			
+			// .filename if filename is present
+            if (mMimeFields->fld_disposition_filename != NULL)
+			{
+                self.filename =
+				[NSString stringWithCString:mMimeFields->fld_disposition_filename
+								   encoding:NSUTF8StringEncoding];
             }
-
-            if (mMimeFields->fld_disposition_filename != NULL) {
-                self.filename = [NSString stringWithCString:mMimeFields->fld_disposition_filename encoding:NSUTF8StringEncoding];
-
-                NSString* lowercaseName = [self.filename lowercaseString];
-                if([lowercaseName hasSuffix:@".xls"] ||
-                    [lowercaseName hasSuffix:@".xlsx"] ||
-                    [lowercaseName hasSuffix:@".key.zip"] ||
-                    [lowercaseName hasSuffix:@".numbers.zip"] ||
-                    [lowercaseName hasSuffix:@".pages.zip"] ||
-                    [lowercaseName hasSuffix:@".pdf"] ||
-                    [lowercaseName hasSuffix:@".ppt"] ||
-                    [lowercaseName hasSuffix:@".doc"] ||
-                    [lowercaseName hasSuffix:@".docx"] ||
-                    [lowercaseName hasSuffix:@".rtf"] ||
-                    [lowercaseName hasSuffix:@".rtfd.zip"] ||
-                    [lowercaseName hasSuffix:@".key"] ||
-                    [lowercaseName hasSuffix:@".numbers"] ||
-                    [lowercaseName hasSuffix:@".pages"] ||
-                    [lowercaseName hasSuffix:@".png"] ||
-                    [lowercaseName hasSuffix:@".gif"] ||
-                    [lowercaseName hasSuffix:@".png"] ||
-                    [lowercaseName hasSuffix:@".jpg"] ||
-                    [lowercaseName hasSuffix:@".jpeg"] ||
-                    [lowercaseName hasSuffix:@".tiff"]) { // hack by gabor, improved by waseem, based on http://developer.apple.com/iphone/library/qa/qa2008/qa1630.html
-                    self.attached = YES;
-                }
-            }
-
+			
+			// .name if name is present
+			if (mMimeFields->fld_content_name != NULL)
+			{
+				self.name =
+				[NSString stringWithCString:mMimeFields->fld_content_name
+								   encoding:NSUTF8StringEncoding];
+			}
         }
     }
 	
@@ -277,45 +275,13 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
     return mMimeFields;
 }
 
-// Returns the disposition type of an attachment
-- (CTContentDispositionType)disposition
-{
-	// Grab the disposition from the mime fields if available (ie. this is init
-	// with initWithMIMEStruct:forMessage:)
-	if (_disposition == CTContentDispositionTypeUndefined && mMimeFields != NULL)
-	{
-		struct mailmime_disposition *disp = mMimeFields->fld_disposition;
-		
-		if (disp != NULL) {
-			if (disp->dsp_type != NULL) {
-				switch (disp->dsp_type->dsp_type) {
-					case MAILMIME_DISPOSITION_TYPE_INLINE:
-						_disposition = CTContentDispositionTypeInline;
-						break;
-						
-					case MAILMIME_DISPOSITION_TYPE_ATTACHMENT:
-						_disposition = CTContentDispositionTypeAttachment;
-						break;
-						
-					case MAILMIME_DISPOSITION_TYPE_ERROR:
-					case MAILMIME_DISPOSITION_TYPE_EXTENSION:
-					default:
-						_disposition = CTContentDispositionTypeUndefined;
-						break;
-				}
-			}
-		}
-	}
-	
-	return _disposition;
-}
-
 - (void)dealloc {
     mailmime_single_fields_free(mMimeFields);
     [mData release];
     [mFilename release];
+	[_name release];
     [mContentId release];
-    self.lastError = nil;
+    [_lastError release];
     //The structs are held by CTCoreMessage so we don't have to free them
     [super dealloc];
 }

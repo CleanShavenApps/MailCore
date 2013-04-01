@@ -346,6 +346,7 @@
     while ((mime = [enumerator nextObject])) {
 		
 		// Go for all single parts that are not text (text/plain or text/html)
+		// Else we'll miss out on all inline attachments
         if ([mime isKindOfClass:[CTMIME_SinglePart class]] &&
 			![mime isKindOfClass:[CTMIME_TextPart class]])
 		{			
@@ -363,14 +364,6 @@
 			// seems like an even better check than .attached property
 			attach.attachmentType =
 			singlePart.contentId.length ? CTAttachmentTypeInline : CTAttachmentTypeAttachment;
-			
-			// We'll probably have a shitty file name (or worse, no file name at
-			// all) if it's an inline attachment.
-			if (attach.attachmentType == CTAttachmentTypeInline)
-			{
-				// Do something if needed
-				
-			}
 			
 			[attachments addObject:attach];
 			[attach release];

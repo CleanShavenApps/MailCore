@@ -50,13 +50,15 @@ typedef void (^CTProgressBlock)(size_t curr, size_t max);
     BOOL mFetched;
     NSString *mFilename;
     NSString *mContentId;
-    NSError *lastError;
 }
 
 @property(nonatomic) BOOL attached;
 @property(nonatomic) BOOL fetched;
 @property(nonatomic) CTContentDispositionType disposition;
 @property(nonatomic, retain) NSString *filename;
+// some clients don't provide filename for attachment, both inline
+// and attachment content-disposition
+@property(nonatomic, retain) NSString *name;
 @property(nonatomic, retain) NSString *contentId;
 @property(nonatomic, retain) NSData *data;
 @property(nonatomic, readonly) size_t size;
