@@ -70,12 +70,15 @@
 }
 
 -(NSString*)decodedFilename {
-    return MailCoreDecodeMIMEPhrase((char *)[self.filename UTF8String]);
+	if (self.filename.length)
+		return MailCoreDecodeMIMEPhrase((char *)[self.filename UTF8String]);
+	
+	return self.filename;
 }
 
 - (NSString *)description {
     return [NSString stringWithFormat:@"Attachment: %@ (Content Type: %@, ID: %@, Disposition: %d, Size: %zd)",
-                self.filename, self.contentType, self.contentId, (int) self.attachmentType, self.size];
+                self.decodedFilename, self.contentType, self.contentId, (int) self.attachmentType, self.size];
 }
 
 - (CTCoreAttachment *)fetchFullAttachment {
