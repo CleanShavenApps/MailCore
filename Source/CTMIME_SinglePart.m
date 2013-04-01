@@ -206,7 +206,7 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 
     if (mFilename) {
 		char *charData = (char *)[mFilename cStringUsingEncoding:NSUTF8StringEncoding];
-		char *dupeData = malloc(strlen(charData));
+		char *dupeData = malloc(strlen(charData) + 1);
 		strcpy(dupeData, charData);
 		
 		BOOL hasContentID = self.contentId.length > 2;
