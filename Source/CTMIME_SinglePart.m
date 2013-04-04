@@ -93,7 +93,9 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 		{	
 			// .contentId if content-id if present
             if (mMimeFields->fld_id != NULL) {
-                self.contentId = [NSString stringWithCString:mMimeFields->fld_id encoding:NSUTF8StringEncoding];
+                mContentId =
+				[[NSString stringWithCString:mMimeFields->fld_id
+									encoding:NSUTF8StringEncoding] retain];
             }
             
 			// .disposition if content-disposition is present
@@ -101,7 +103,7 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
             struct mailmime_disposition *disp = mMimeFields->fld_disposition;
             if (disp != NULL && disp->dsp_type != NULL)
 			{
-				self.attached =
+				mAttached =
 				(disp->dsp_type->dsp_type == MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
 				
 				switch (disp->dsp_type->dsp_type)
@@ -125,17 +127,17 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
 			// .filename if filename is present
             if (mMimeFields->fld_disposition_filename != NULL)
 			{
-                self.filename =
-				[NSString stringWithCString:mMimeFields->fld_disposition_filename
-								   encoding:NSUTF8StringEncoding];
+                mFilename =
+				[[NSString stringWithCString:mMimeFields->fld_disposition_filename
+									encoding:NSUTF8StringEncoding] retain];
             }
 			
 			// .name if name is present
 			if (mMimeFields->fld_content_name != NULL)
 			{
-				self.name =
-				[NSString stringWithCString:mMimeFields->fld_content_name
-								   encoding:NSUTF8StringEncoding];
+				_name =
+				[[NSString stringWithCString:mMimeFields->fld_content_name
+									encoding:NSUTF8StringEncoding] retain];
 			}
         }
     }
@@ -147,6 +149,16 @@ static void download_progress_callback(size_t current, size_t maximum, void * co
     if (self.fetched == NO) {
         struct mailmime_single_fields *mimeFields = NULL;
 
+		BOOL mMimeIsNULL = mMime == NULL;
+		BOOL mMimeFieldsIsNULL = (mMimeIsNULL || mMime->mm_mime_fields == NULL);
+		BOOL mMimeContentTypeIsNULL = (mMimeIsNULL || mMime->mm_content_type == NULL);
+		
+		// DEBUG CODE TO TRACK CRASH
+		if (mMimeFieldsIsNULL || mMimeFieldsIsNULL || mMimeContentTypeIsNULL)
+		{
+			NSAssert(0, @"mMime is NULL %d mm_mime_fields is NULL %d mm_content_type is NULL %d", mMimeIsNULL, mMimeFieldsIsNULL, mMimeContentTypeIsNULL);
+		}
+		
         int encoding = MAILMIME_MECHANISM_8BIT;
         mimeFields = mailmime_single_fields_new(mMime->mm_mime_fields, mMime->mm_content_type);
         if (mimeFields != NULL && mimeFields->fld_encoding != NULL)
