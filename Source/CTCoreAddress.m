@@ -65,6 +65,22 @@
     return self;
 }
 
+- (id)initWithCoder:(NSCoder *)decoder
+{
+	self = [super init];
+	if (self)
+	{
+		self.name = [decoder decodeObjectForKey:@"name"];
+		self.email = [decoder decodeObjectForKey:@"email"];
+	}
+	return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+	[coder encodeObject:self.name forKey:@"name"];
+	[coder encodeObject:self.email forKey:@"email"];
+}
 
 -(NSString*)decodedName {
     return MailCoreDecodeMIMEPhrase((char *)[self.name UTF8String]);

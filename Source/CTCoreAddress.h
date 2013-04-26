@@ -37,7 +37,8 @@
  forward, you can get and set a name and an e-mail address.
 */
 
-@interface CTCoreAddress : NSObject {
+@interface CTCoreAddress : NSObject <NSCoding>
+{
     NSString *email;
     NSString *name;
 }
